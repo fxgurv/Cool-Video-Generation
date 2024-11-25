@@ -83,11 +83,108 @@ Synchronized with audio using timestamp data from Whisper transcription
 Support for template saving and loading
 The subtitles are implemented in the subtitle.py utility file and can be previewed/customized through the subtitle_editor.html interface before being applied to videos.
 
-- 🎨 **Customization Options**
-  - Font selection
-  - Color schemes
-  - Text size and position
-  - Animation effects
+1. WORD HIGHLIGHT SUBTITLES ✨
+python
+Copy code
+Style Type: word_highlight
+Default Configuration:
+{
+    "font": "Helvetica-Bold",
+    "fontsize": 30,
+    "color": "white",
+    "highlight_color": "#4CAF50",
+    "stroke_width": 1.5,
+    "stroke_color": "black"
+}
+Technical Implementation:
+
+Creates two TextClips for each word:
+Base clip: Normal state (white)
+Highlight clip: Active state (green)
+Dynamic positioning system:
+X_buffer = frame_width * 0.1
+Y_buffer = frame_height * 0.2
+Word spacing = fontsize * 0.3
+Automatic line breaks when x_pos + word_width > frame_width
+Vertical spacing = fontsize + 10px between lines
+Animation Flow:
+
+Words appear in default white color
+Each word highlights in green during its spoken duration
+Returns to white after word completion
+Smooth transition effects between states
+2. BACKGROUND HIGHLIGHT SUBTITLES 🎯
+python
+Copy code
+Style Type: background_highlight
+Default Configuration:
+{
+    "font": "Helvetica-Bold",
+    "fontsize": 30,
+    "color": "white",
+    "bg_color": "black",
+    "highlight_color": "#4CAF50"
+}
+Technical Implementation:
+
+Single TextClip per word with background property
+Background transitions:
+Initial: Transparent/Black
+Active: Highlight color (#4CAF50)
+Positioning system matches word_highlight
+Maintains consistent word spacing
+Background padding for visual clarity
+Animation Flow:
+
+Words appear with black/transparent background
+Background fills with highlight color during word timing
+Returns to transparent after completion
+Clean transitions between states
+Common Features for Both Styles 🛠️
+Text Handling:
+
+python
+Copy code
+Max Characters: 80 per line
+Max Lines: 2
+Word Spacing: 0.3 × font size
+Line Spacing: font size + 10px
+Customization Options:
+
+python
+Copy code
+Font Properties:
+- Family: Any system font
+- Size: Adjustable (default 30px)
+- Weight: Bold/Normal
+- Color: Any hex/RGB value
+
+Position Controls:
+- Draggable interface
+- X/Y coordinate system
+- Percentage-based positioning
+- Frame-aware boundaries
+Video Support:
+
+python
+Copy code
+Aspect Ratios:
+- Landscape (16:9)
+- Portrait (9:16)
+- Square (1:1)
+
+Frame Adaptation:
+- Auto-scaling
+- Responsive positioning
+- Edge padding (10% of frame)
+Performance Features:
+
+python
+Copy code
+- GPU acceleration support
+- Efficient clip composition
+- Memory-optimized rendering
+- Real-time preview capability
 
 ## Installation
 
