@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Subtitle Parameter Tester</title>
+    <style>
+        :root {
+            --primary-bg: #1e1e1e;
+            --secondary-bg: #2d2d2d;
+            --accent-color: #4CAF50;
+            --text-color: #ffffff;
+            --border-color: #444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background: var(--primary-bg);
+            color: var(--text-color);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 400px 1fr;
+            gap: 20px;
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .controls-panel {
+            background: var(--secondary-bg);
+            padding: 20px;
+            border-radius: 10px;
+            height: calc(100vh - 40px);
+            overflow-y: auto;
+        }
+
+        .preview-panel {
+            background: var(--secondary-bg);
+            padding: 20px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .preview-window {
+            background: #000;
+            aspect-ratio: 16/9;
+            position: relative;
+            overflow: hidden;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .subtitle-container {
+            position: absolute;
+            width: 100%;
+            padding: 20px;
+            text-align: center;
+            cursor: move;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 8px 12px;
+            background: rgba(0,0,0,0.2);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            color: var(--text-color);
+        }
+
+        .form-input[type="color"] {
+            height: 40px;
+            padding: 2px;
+        }
+
+        .coordinates {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0,0,0,0.7);
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .word {
+            display: inline-block;
+            padding: 2px 5px;
+            margin: 2px;
+            border-radius: 3px;
+            transition: all 0.3s ease;
+        }
+
+        .word.active-highlight {
+            color: var(--highlight-color);
+        }
+
+        .word.active-background {
+            background-color: var(--background-color);
+        }
+
+        .title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: var(--accent-color);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="controls-panel">
+            <h2 class="title">Subtitle Parameters</h2>
+            
+            <div class="form-group">
+                <label class="form-label">Style</label>
+                <select class="form-input" id="subtitleStyle" onchange="updatePreview()">
+                    <option value="word_highlight">Word Highlight</option>
+                    <option value="background_highlight">Background Highlight</option>
+                    <option value="word_by_word">Word by Word</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Font Family</label>
+                <select class="form-input" id="fontFamily" onchange="updatePreview()">
+                    <option value="Arial">Arial</option>
+                    <option value="Helvetica">Helvetica</option>
+                    <option value="Times New Roman">Times New Roman</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Font Size (px)</label>
+                <input type="number" class="form-input" id="fontSize" value="30" onchange="updatePreview()">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Text Color</label>
+                <input type="color" class="form-input" id="textColor" value="#ffffff" onchange="updatePreview()">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Highlight Color</label>
+                <input type="color" class="form-input" id="highlightColor" value="#4CAF50" onchange="updatePreview()">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Max Characters per Line</label>
+                <input type="number" class="form-input" id="maxChars" value="80" onchange="updatePreview()">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Max Lines</label>
+                <input type="number" class="form-input" id="maxLines" value="2" onchange="updatePreview()">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">X Position</label>
+                <input type="number" class="form-input" id="xPos" value="50" onchange="updatePosition()">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Y Position</label>
+                <input type="number" class="form-input" id="yPos" value="50" onchange="updatePosition()">
+            </div>
+        </div>
+
+        <div class="preview-panel">
+            <h2 class="title">Live Preview</h2>
+            <div class="preview-window">
+                <div class="coordinates" id="coordinates">X: 50%, Y: 50%</div>
+                <div class="subtitle-container" id="subtitleContainer">
+                    <div id="subtitleText"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let isDragging = false;
+    let currentX;
+    let currentY;
+    let initialX;
+    let initialY;
+    let xOffset = 0;
+    let yOffset = 0;
+    let currentWordIndex = 0;
+
+    const sampleText = "This is a sample subtitle text that demonstrates the word highlighting effect with proper line breaks and maximum characters per line limitation";
+
+    function splitIntoLines(text, maxChars) {
+        const words = text.split(' ');
+        const lines = [];
+        let currentLine = [];
+        let currentLineLength = 0;
+
+        for (const word of words) {
+            if (currentLineLength + word.length + 1 <= maxChars) {
+                currentLine.push(word);
+                currentLineLength += word.length + 1;
+            } else {
+                lines.push(currentLine.join(' '));
+                currentLine = [word];
+                currentLineLength = word.length + 1;
+            }
+        }
+
+        if (currentLine.length > 0) {
+            lines.push(currentLine.join(' '));
+        }
+
+        return lines;
+    }
+
+    function updatePreview() {
+        const style = document.getElementById('subtitleStyle').value;
+        const fontFamily = document.getElementById('fontFamily').value;
+        const fontSize = document.getElementById('fontSize').value;
+        const textColor = document.getElementById('textColor').value;
+        const highlightColor = document.getElementById('highlightColor').value;
+        const maxChars = parseInt(document.getElementById('maxChars').value);
+        const maxLines = parseInt(document.getElementById('maxLines').value);
+
+        const subtitleText = document.getElementById('subtitleText');
+        subtitleText.style.fontFamily = fontFamily;
+        subtitleText.style.fontSize = `${fontSize}px`;
+        subtitleText.style.color = textColor;
+
+        const lines = splitIntoLines(sampleText, maxChars);
+        const limitedLines = lines.slice(0, maxLines);
+
+        subtitleText.innerHTML = limitedLines
+            .map(line => line.split(' ')
+                .map(word => `<span class="word">${word}</span>`)
+                .join(' '))
+            .join('<br>');
+
+        document.documentElement.style.setProperty('--highlight-color', highlightColor);
+        document.documentElement.style.setProperty('--background-color', highlightColor);
+    }
+
+    function updatePosition() {
+        const xPos = document.getElementById('xPos').value;
+        const yPos = document.getElementById('yPos').value;
+        const container = document.getElementById('subtitleContainer');
+        
+        container.style.transform = `translate(${xPos}px, ${yPos}px)`;
+        document.getElementById('coordinates').textContent = `X: ${xPos}px, Y: ${yPos}px`;
+    }
+
+    function dragStart(e) {
+        if (e.type === "touchstart") {
+            initialX = e.touches[0].clientX - xOffset;
+            initialY = e.touches[0].clientY - yOffset;
+        } else {
+            initialX = e.clientX - xOffset;
+            initialY = e.clientY - yOffset;
+        }
+
+        if (e.target.closest('.subtitle-container')) {
+            isDragging = true;
+        }
+    }
+
+    function drag(e) {
+        if (isDragging) {
+            e.preventDefault();
+
+            if (e.type === "touchmove") {
+                currentX = e.touches[0].clientX - initialX;
+                currentY = e.touches[0].clientY - initialY;
+            } else {
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+            }
+
+            xOffset = currentX;
+            yOffset = currentY;
+
+            const container = document.getElementById('subtitleContainer');
+            container.style.transform = `translate(${currentX}px, ${currentY}px)`;
+            
+            document.getElementById('xPos').value = Math.round(currentX);
+            document.getElementById('yPos').value = Math.round(currentY);
+            document.getElementById('coordinates').textContent = 
+                `X: ${Math.round(currentX)}px, Y: ${Math.round(currentY)}px`;
+        }
+    }
+
+    function dragEnd() {
+        isDragging = false;
+    }
+
+    function highlightWords() {
+        const style = document.getElementById('subtitleStyle').value;
+        const words = document.getElementsByClassName('word');
+        
+        // Reset all words
+        Array.from(words).forEach(word => {
+            word.classList.remove('active-highlight', 'active-background');
+        });
+
+        // Apply new highlight
+        if (currentWordIndex < words.length) {
+            if (style === 'word_highlight') {
+                words[currentWordIndex].classList.add('active-highlight');
+            } else if (style === 'background_highlight') {
+                words[currentWordIndex].classList.add('active-background');
+            }
+            currentWordIndex++;
+        } else {
+            currentWordIndex = 0;
+        }
+    }
+
+    // Event Listeners
+    document.addEventListener("touchstart", dragStart, false);
+    document.addEventListener("touchend", dragEnd, false);
+    document.addEventListener("touchmove", drag, false);
+    document.addEventListener("mousedown", dragStart, false);
+    document.addEventListener("mouseup", dragEnd, false);
+    document.addEventListener("mousemove", drag, false);
+
+    // Initialize
+    updatePreview();
+    setInterval(highlightWords, 500); // Word highlight animation interval
+
+    // Real-time updates for all inputs
+    document.querySelectorAll('.form-input').forEach(input => {
+        input.addEventListener('input', () => {
+            updatePreview();
+            updatePosition();
+        });
+    });
+</script>
+</body>
+</html>
